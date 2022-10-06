@@ -1,10 +1,13 @@
-##  搭建 Concourse Pipeline
+##  Concourse Pipeline
 
-### 环境
+### Environments
 
-linux (x86-64) 或者 macos (aarch64 架构不行)， windows 暂时不知道怎么弄 😄
+* linux (x86-64) ubuntu/centos x86_64 ✅
+* linux arm64 ubuntu/centos https://github.com/zjpedu/concourse-arm64 ❎
+* m1 pro apple silicon macos ❎
+* windows 🤷‍♂️
 
-### 安装 docker
+### Install Docker
 
 ```shell
 sudo apt-get update
@@ -17,78 +20,75 @@ echo \
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli docker-compose containerd.io docker-compose-plugin
 sudo service docker start
-sudo docker run hello-world # 进入到 docker 中
-exit # 退出 docker
+sudo service docker status 
+docker --version
+# sudo docker run hello-world
+# exit
 ```
 
 
-### 安装 Concourse CI
+### Install Concourse CI
 
 ```shell
 git clone https://github.com/concourse/concourse-docker.git
 cd concourse-docker
 ./keys/generate
 docker-compose up -d
-docker-compose down. # 关闭，concourse
-
+docker-compose down
 ```
 
 
-### 安装 Fly CLI
+### Install Fly CLI
 
 https://github.com/concourse/concourse/releases
 
-下载对应的包，使得 `fly` 命令可用。解压后，
+Download the `fly`tool and decompress. Then moving the fly to `/usr/local/bin`
+
+### Demo Show
 
 ```shell
-mv ~/fly /usr/local/bin
-```
-
-### Hello World Demo
-
-```shell
-fly -t ci login -c http://localhost:8080 -u test -p test
+fly -t ci login -c http://localhost:8080 -u admin -p admin
 fly targets
 ```
 
-接着用浏览器打开 `http://localhost:8080` 看部署是否成功，看到下述画面表示成功安装 Concourse CI。 需要登陆，用户名和密码都是 test
+Open web browser `http://localhost:8080`, user_name: admin password: admin
 
 <img width="1916" alt="截屏2022-09-30 16 56 23" src="https://user-images.githubusercontent.com/13810907/193233277-4ee02ae3-3d8e-45a5-bc80-4c949de790b3.png">
 
 * pipeline.yml
 
 ```shell
----
 jobs:
-  - name: job-hello-world
+  - name: job-hello-csapp
     public: true
     plan:
-      - task: hello-world
+      - task: hello-csapp
         config:
           platform: linux
           image_resource:
             type: docker-image
-            source: {repository: busybox}
+            source: {
+                repository: ubuntu,
+                tag: 20.04
+          }
           run:
             path: echo
-            args: [hello world]
+            args: [hello, csapp!]
 ```
 
 ```shell
 fly -t ci set-pipeline -p test_pipeline -c pipeline.yml
 ```
-<img width="1920" alt="截屏2022-09-30 17 18 50" src="https://user-images.githubusercontent.com/13810907/193237906-ac8e5795-0b3e-4896-bc13-9a673f4db079.png">
-
-<img width="1920" alt="截屏2022-09-30 17 53 43" src="https://user-images.githubusercontent.com/13810907/193244840-c8fbe76a-fc7b-4126-b291-4d25b420386a.png">
+<img width="1912" alt="截屏2022-10-02 15 04 13" src="https://user-images.githubusercontent.com/13810907/193442261-0069fad0-02a9-4aa1-b5e7-05b02566f613.png">
 
 
-### 参考
+### Reference
 
 1. https://github.com/concourse/concourse
 
-### 练习
+### Excerises
 
-# Setup a Concourse CI(Continuous Integration) example pipeline.
+#### Setup a Concourse CI(Continuous Integration) example pipeline.
 
 1. Refer to Quick Start https://concourse-ci.org/quick-start.html to deploy Concourse using docker-compose.
 2. Setup the hello-world pipeline based on https://concourse-ci.org/tutorial-hello-world.html.
@@ -102,6 +102,42 @@ Then Concourse can fetch and use this container. Docker Image requirement:
 3. generate a rsa key.
 4. [Plus] enable coredump
 
+
+```shell
+jobs:
+    - name: coredump
+      public: true
+      plan:
+        - task: execute-the-tasks
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source: {
+                repository: ubuntu,
+                tag: 20.04
+              }
+            run:
+               path: /bin/bash
+               args:
+                - "-e"
+                - "-c"
+                - |
+                  set -x
+                  apt-get update
+                  apt-get install git -y
+                  apt-get install gcc -y
+                  apt-get install libleveldb-dev -y
+                  apt-get install openssh-client -y
+                  ssh-keygen -q -t rsa -N '' -f /root/.ssh/id_rsa
+                  echo 'ulimit -c unlimited' >> ~/.bash_profile
+                  source ~/.bash_profile
+                  cat /root/.ssh/id_rsa.pub
+                  git clone https://github.com/zjpedu/Computer-Systems-Labs
+                  cd Computer-Systems-Labs/gdb_test
+                  gcc -o test test3.c
+```
+
 Requirement II. Instead of just echo helloworld, you should write a simple Concourse CI pipeline to get a github repo, compile a C program and run the program.
 
 Refer to Concourse documentation(https://concourse-ci.org/docs.html).
@@ -112,3 +148,101 @@ The expected jobs:
 2. 完成 job2
 4. [Plus] Using Concourse github resource instead of clone the repo manually (refer to https://github.com/concourse/git-resource)
 
+A: pipeline.yml
+
+```shell
+jobs:
+    - name: lab2
+      public: true
+      plan:
+        - task: execute-the-tasks
+          config:
+            platform: linux
+            image_resource:
+              type: docker-image
+              source: {
+                repository: ubuntu,
+                tag: 20.04
+              }
+            run:
+               path: /bin/sh
+               args:
+                - "-e"
+                - "-c"
+                - |
+                  set -x
+                  apt-get update
+                  apt-get install gcc -y
+                  apt-get install gcc-multilib -y
+                  apt-get install make -y
+                  apt-get install git -y
+                  git clone https://github.com/Lily127Yang/Computer-Systems-Labs.git
+                  cd Computer-Systems-Labs/lab2/datalab-handout
+                  make
+                  ./btest -T 50
+                  result=`./btest -T 50 | grep "Total point" | cut -d " " -f3 | cut -d "/" -f1`
+                  ddl=`date -d "2022-10-09 23:59" +%s --utc`
+                  current_time=`date +%s`
+                  [ $current_time -le $ddl ]
+                  [ $result -ge 36 ]
+```
+
+or using the following method
+
+```shell
+resources:
+- icon: github
+  name: csapp
+  source:
+    uri: https://github.com/Lily127Yang/Computer-Systems-Labs.git
+  type: git
+
+jobs:
+    - name: lab2
+      public: true
+      plan:
+        - get: csapp
+          trigger: true
+        - task: execute-the-tasks
+          config:
+            inputs:
+              - name: csapp
+            platform: linux
+            image_resource:
+              type: docker-image
+              source: {
+                repository: ubuntu,
+                tag: 20.04
+              }
+            run:
+               path: /bin/sh
+               args:
+                - "-e"
+                - "-c"
+                - |
+                  set -x
+                  apt-get update
+                  apt-get install gcc -y
+                  apt-get install gcc-multilib -y
+                  apt-get install make -y
+                  apt-get install git -y
+                  cd csapp/lab2/datalab-handout
+                  make
+                  ./btest -T 50
+                  result=`./btest -T 50 | grep "Total point" | cut -d " " -f3 | cut -d "/" -f1`
+                  ddl=`date -d "2022-10-09 23:59" +%s --utc`
+                  current_time=`date +%s`
+                  [ $current_time -le $ddl ]
+                  [ $result -ge 36 ]
+```
+
+start docker container inspect the `run` command
+
+```shell
+sudo docker run -it ubuntu bash
+```
+
+
+## GitHub Actions
+
+Reference by my github action workflow https://github.com/zjpedu/Computer-Systems-Labs/tree/main/.github/workflows
